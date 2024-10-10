@@ -1,0 +1,37 @@
+import click
+from {{ client_module }} import Client, AuthenticatedClient
+{% for import_statement in endpoint_imports %}
+{{ import_statement }}
+{% endfor %}
+from {{ client_module }}.models import *
+
+@click.group()
+def cli():
+    """CLI for interacting with the API."""
+    pass
+
+{% for path, methods in paths.items() %}
+{% for method, details in methods.items() %}
+@cli.command()
+@click.option('--base-url', required=True, help='Base URL for the API')
+{% for param in details.get('parameters', []) %}
+@click.option('--{{ param["name"] }}', required={{ param["required"] }}, help='{{ param.get("description", "") }}')
+{% endfor %}
+def {{ details.get('operationId', method).replace("__", "_") }}(base_url, {% for param in details.get('parameters', []) %}{{ param["name"] }}{% if not loop.last %}, {% endif %}{% endfor %}):
+    """
+    {{ details.get("summary", "") }}
+    """
+    client = Client(base_url=base_url)
+    response = {{ function_mappings[details.get('operationId', method).replace("__", "_")] }}(
+        client=client,
+        {% for param in details.get('parameters', []) %}
+        {{ param["name"] }}={{ param["name"] }}{% if not loop.last %}, {% endif %}
+        {% endfor %}
+    )
+    click.echo(response)
+
+{% endfor %}
+{% endfor %}
+
+if __name__ == "__main__":
+    cli()
