@@ -1,36 +1,56 @@
 import click
-from {{ client_module }} import Client, AuthenticatedClient
-{% for import_statement in endpoint_imports %}
-{{ import_statement }}
-{% endfor %}
-from {{ client_module }}.models import *
+import json
+import requests
+from typing import Optional
 
 @click.group()
 def cli():
     """CLI for interacting with the API."""
     pass
 
-{% for path, methods in paths.items() %}
-{% for method, details in methods.items() %}
-@cli.command()
-@click.option('--base-url', required=True, help='Base URL for the API')
-{% for param in details.get('parameters', []) %}
-@click.option('--{{ param["name"] }}', required={{ param["required"] }}, help='{{ param.get("description", "") }}')
+{% for operation in operations %}
+@cli.command('{{ operation.snake_case_name }}-{{ operation.method }}')
+@click.option('--base-url', required=True, help='Base URL for the API', default='https://api.example.com/v1')
+{% for param in operation.path_parameters %}
+@click.option('--{{ param.name }}', required=True, help='{{ param.description }}')
 {% endfor %}
-def {{ details.get('operationId', method).replace("__", "_") }}(base_url, {% for param in details.get('parameters', []) %}{{ param["name"] }}{% if not loop.last %}, {% endif %}{% endfor %}):
+{% for param in operation.query_parameters %}
+@click.option('--{{ param.name }}', required=False, help='{{ param.description }}', type={{ param.type }}, default={{ param.default if param.default else None }})
+{% endfor %}
+{% if operation.body_required %}
+@click.option('--data', required=True, help='Request body as JSON string')
+{% endif %}
+def {{ operation.snake_case_name }}_{{ operation.method }}(
+    base_url,
+    {% for param in operation.path_parameters %}
+    {{ param.name }},
+    {% endfor %}
+    {% for param in operation.query_parameters %}
+    {{ param.name }}: Optional[{{ param.type }}] = None,
+    {% endfor %}
+    {% if operation.body_required %}
+    data,
+    {% endif %}
+):
     """
-    {{ details.get("summary", "") }}
+    {{ operation.summary }}
+    
+    {{ operation.description }}
     """
-    client = Client(base_url=base_url)
-    response = {{ function_mappings[details.get('operationId', method).replace("__", "_")] }}(
-        client=client,
-        {% for param in details.get('parameters', []) %}
-        {{ param["name"] }}={{ param["name"] }}{% if not loop.last %}, {% endif %}
-        {% endfor %}
+    url = f"{base_url}{{ operation.path }}"
+    {% if operation.query_parameters %}
+    params = { {% for param in operation.query_parameters %}'{{ param.name }}': {{ param.name }}, {% endfor %}}
+    # Remove None values
+    params = {k: v for k, v in params.items() if v is not None}
+    {% endif %}
+    
+    response = requests.{{ operation.method }}(
+        url,
+        {% if operation.query_parameters %}params=params,{% endif %}
+        {% if operation.body_required %}json=json.loads(data),{% endif %}
     )
-    click.echo(response)
+    click.echo(response.text)
 
-{% endfor %}
 {% endfor %}
 
 if __name__ == "__main__":

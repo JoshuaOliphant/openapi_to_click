@@ -10,6 +10,8 @@ dependencies = [
     "jinja2>=3.1.4",
     "openapi-python-client>=0.21.5",
     "pyyaml>=6.0.2",
+    "requests>=2.31.0",
+    "pydantic>=2.4.0",
 ]
 
 [tool.pyright]
