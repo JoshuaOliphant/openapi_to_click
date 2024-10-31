@@ -1,8 +1,8 @@
-name: Fix Diagnostics
+name: Run unit tests
 on: [pull_request]
 
 jobs:
-  uv-example:
+  run-unit-tests:
     name: python
     runs-on: ubuntu-latest
 
