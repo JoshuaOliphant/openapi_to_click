@@ -1,3 +1,5 @@
+![example workflow](https://github.com/JoshuaOliphant/openapi_to_click/actions/workflows/pr-unit-tests.yml/badge.svg)
+
 # OpenAPI Click CLI Generator
 
 ## Overview
