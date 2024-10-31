@@ -1,4 +1,5 @@
-name: Example
+name: Fix Diagnostics
+on: [pull_request]
 
 jobs:
   uv-example:
