@@ -1,6 +1,6 @@
 [project]
 name = "openapi-to-cli"
-authors = ["Joshua Oliphant <joshua.oliphant@hey.com>"]
+authors = [{ name = "Joshua Oliphant", email = "joshua.oliphant@hey.com" }]
 version = "0.1.0"
 description = "A CLI generator for OpenAPI specs"
 readme = "README.md"
@@ -9,6 +9,7 @@ dependencies = [
     "click>=8.1.7",
     "jinja2>=3.1.4",
     "openapi-python-client>=0.21.5",
+    "pytest>=8.3.3",
     "pyyaml>=6.0.2",
 ]
 
