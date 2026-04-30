@@ -13,20 +13,16 @@ OpenAPI Click CLI Generator is a Python tool that automatically generates comman
 # Install dependencies and create virtual environment
 uv sync
 
-# Activate virtual environment
-source .venv/bin/activate
-
 # Build distribution packages
 uv build
 ```
 
-**Running the Generator:**
+**Running the Generator (pass --template-path explicitly; the default is broken — see Known Gotchas):**
 ```bash
-# Run the CLI generator
-uv run python app/main.py <OPENAPI_SPEC_PATH> <OUTPUT_PATH> [--template-path TEMPLATE_PATH]
+uv run python app/main.py <OPENAPI_SPEC_PATH> <OUTPUT_PATH> --template-path templates
 
-# Example with test spec
-uv run python app/main.py test_spec.json ./output
+# Example with bundled test spec
+uv run python app/main.py test_spec.json ./output --template-path templates
 ```
 
 **Testing:**
@@ -77,18 +73,7 @@ The CLI generation follows this flow (app/main.py:129-169):
 
 ### Generated Output Structure
 
-When the generator runs, it creates:
-```
-output/
-├── pyproject.toml (from openapi-python-client)
-├── {client_package_name}/ (auto-named from spec)
-│   ├── __init__.py
-│   ├── api/
-│   │   └── default/
-│   │       └── {operation_id}.py (one per endpoint)
-│   └── models/
-└── cli.py (Click CLI - our generated code)
-```
+The generator emits `output/cli.py` (our Click CLI) alongside the openapi-python-client tree (`output/<client_pkg>/{api,models}/` plus its own `pyproject.toml`).
 
 ### Important Conventions
 
@@ -102,8 +87,41 @@ output/
 - This name is used for imports in the generated CLI (app/main.py:67)
 
 **Template Path Resolution:**
-- If --template-path not provided, defaults to app/templates/ directory
-- Template must contain cli_template.jinja2 (app/main.py:154)
+- Code default (app/main.py:154) is `app/templates/`, but the bundled template
+  actually lives at repo-root `templates/cli_template.jinja2`. In practice you
+  must pass `--template-path templates` when running from the repo root, or
+  move the template to `app/templates/` to make the default work.
+- The directory must contain `cli_template.jinja2` (file name is hard-coded).
+
+## Known Gotchas
+
+- **`update_pyproject_toml` is effectively a no-op (app/main.py:51-63).** It
+  only inserts `click` under a `[tool.poetry.dependencies]` header, but the
+  `openapi-python-client` versions used here emit a PEP 621 `[project]`
+  table. The generated client's pyproject is left unchanged.
+- **`openapi-python-client` is invoked as a subprocess, not a library**
+  (app/main.py:37). It must be resolvable on PATH — running outside
+  `uv run` (or an activated `.venv`) will fail with a confusing error.
+- **Tests stub the template** (tests/test_main.py:77, 108, 159). Each test
+  writes `# Generated CLI\n` over `cli_template.jinja2`, so the suite covers
+  the orchestration pipeline but does NOT exercise the real Jinja template.
+  Changes to `templates/cli_template.jinja2` are not test-covered.
+- **`initialize_package_directories` picks the first non-`.ruff_cache`
+  directory as the client package** (app/main.py:67). If the output dir has
+  any other pre-existing subdirectory, the wrong one wins silently.
+- **The generated `cli.py` does `from <client>.models import *`**
+  (templates/cli_template.jinja2:6), which will collide with any imported
+  symbol of the same name. Worth remembering before adding template imports.
+
+## CI & Environment
+
+- Python 3.13+ required (pyproject.toml `requires-python = ">=3.13"`, pinned
+  in `.python-version`).
+- Dev dependencies live under `[dependency-groups]` (PEP 735); `uv sync`
+  installs the `dev` group by default.
+- CI: `.github/workflows/pr-unit-tests.yml` runs `uv sync --locked` then
+  `uv run pytest tests` on every pull request. No lint/type check stage.
+- Tests import via `from app.main import ...` — must be invoked from repo root.
 
 ## Testing Strategy
 
