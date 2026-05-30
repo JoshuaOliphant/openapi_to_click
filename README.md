@@ -1,86 +1,104 @@
-![example workflow](https://github.com/JoshuaOliphant/openapi_to_click/actions/workflows/pr-unit-tests.yml/badge.svg)
+![CI](https://github.com/JoshuaOliphant/openapi_to_click/actions/workflows/pr-unit-tests.yml/badge.svg)
 
-# OpenAPI Click CLI Generator
+# OpenAPI → Click CLI Generator
 
-## Overview
-The **OpenAPI Click CLI Generator** is a Python application that automatically generates a command-line interface (CLI) from an OpenAPI specification. The generated CLI allows easy interaction with the API defined in the OpenAPI spec, leveraging Python's Click library.
+Generate a ready-to-run [Click](https://click.palletsprojects.com/) command-line
+interface from any OpenAPI 3.x specification. The generator wraps
+[openapi-python-client](https://github.com/openapi-generators/openapi-python-client)
+to produce a typed Python API client, then emits a `cli.py` that exposes every
+operation as a subcommand.
 
 ## Features
-- Generates Python clients from an OpenAPI spec using **openapi-python-client**.
-- Uses **Click** to provide an intuitive CLI for interacting with the generated API.
-- Supports YAML and JSON OpenAPI spec formats.
-- Customizable templates using **Jinja2**.
 
-## Prerequisites
-Ensure you have the following dependencies installed:
+- **One command per operation** — `operationId`s become Click subcommands with
+  typed options derived from the spec (`integer` → `INT`, `boolean` → `BOOL`, …).
+- **Tag-aware imports** — endpoints grouped under any tag are wired up correctly,
+  not just the `default` tag.
+- **Authentication** — pass `--token` (or set `OPENAPI_CLI_TOKEN`) to switch from
+  `Client` to `AuthenticatedClient` automatically.
+- **Request bodies** — JSON request bodies are accepted via `--body` (a literal
+  JSON string or `@path/to/file.json`) and deserialized into the generated model.
+- **Sensible defaults** — `--base-url` defaults to the spec's first absolute
+  `servers` entry and honors `OPENAPI_CLI_BASE_URL`.
+- **Readable output** — responses print as pretty JSON by default, or `--output raw`.
 
-- Python 3.12+
-- Click
-- Jinja2
-- openapi-python-client
-- PyYAML
-- Pydantic
+## Requirements
+
+- Python 3.13+
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 
-You can install the required dependencies using and create the virtual environment with:
+## Installation
+
 ```sh
 uv sync
-source .venv/bin/activate
-```
-
-### Running the Project
-After activating the virtual environment, you can run the project with the `--help` flag to see the available options:
-```sh
-uv run python main.py --help
-Usage: main.py [OPTIONS] OPENAPI_SPEC_PATH OUTPUT_PATH
-
-  Generate a command-line interface (CLI) for an OpenAPI specification.
-
-  Arguments: - OPENAPI_SPEC_PATH: Path to the OpenAPI specification file
-  (YAML/JSON). - OUTPUT_PATH: Directory where the generated CLI will be saved.
-  - TEMPLATE_PATH: Path to the directory containing the Jinja templates
-  (optional).
-
-Options:
-  --template-path PATH  Path to the directory containing the Jinja templates.
-  --help                Show this message and exit.
 ```
 
 ## Usage
-The CLI generator script takes in an OpenAPI specification and outputs a CLI for interacting with the specified API.
 
-### Command
 ```sh
-python main.py <OPENAPI_SPEC_PATH> <OUTPUT_PATH> [--template-path TEMPLATE_PATH]
+uv run openapi-to-cli <OPENAPI_SPEC_PATH> <OUTPUT_PATH> [--template-path DIR]
 ```
 
-- **OPENAPI_SPEC_PATH**: Path to the OpenAPI specification file (YAML/JSON).
-- **OUTPUT_PATH**: Directory where the generated CLI will be saved.
-- **TEMPLATE_PATH**: (Optional) Path to the directory containing the Jinja templates.
+| Argument            | Description                                                        |
+| ------------------- | ----------------------------------------------------------------- |
+| `OPENAPI_SPEC_PATH` | Path to the OpenAPI spec (YAML or JSON).                           |
+| `OUTPUT_PATH`       | Directory where the client and `cli.py` are written.              |
+| `--template-path`   | Optional Jinja template dir (defaults to the bundled template).    |
+
+You can also run it as a module: `uv run python -m openapi_to_cli ...`.
 
 ### Example
-```sh
-python main.py openapi_spec.yaml ./output
-```
-This command will generate a CLI from the `openapi_spec.yaml` file and save it in the `./output` directory.
 
-### Generated CLI
-After generating the CLI, you can run the following command to see the available options:
 ```sh
-python output/cli.py --help
+uv run openapi-to-cli test_spec.json ./output
+```
+
+This generates the API client plus `./output/cli.py`. The bundled template is
+used automatically — no `--template-path` required.
+
+### Running the generated CLI
+
+```sh
+cd output
+python cli.py --help                       # list every operation
+python cli.py read-item-items-item-id-get --help
+python cli.py read-item-items-item-id-get --item-id 7 --base-url https://api.example.com
+```
+
+Authenticated request with a JSON body:
+
+```sh
+python cli.py create-widget \
+  --token "$TOKEN" \
+  --base-url https://api.example.com \
+  --body '{"name": "gadget"}'
 ```
 
 ## Customization
-The CLI generator uses Jinja2 templates to create the command-line interface. If needed, you can modify the `cli_template.jinja2` to change the structure of the generated CLI.
 
-### Building Distributions
-To build a source or binary distribution (wheel) for your project, use:
+The CLI shape is driven by `src/openapi_to_cli/templates/cli_template.jinja2`.
+Copy it elsewhere, edit it, and pass `--template-path` to use your version.
+
+## Development
+
+```sh
+uv sync
+uv run pytest tests        # tests (exercise the real template + opc pipeline)
+uv run ruff check .        # lint
+uv run ruff format .       # format
+uv run pyright             # type-check
+```
+
+## Building
+
 ```sh
 uv build
 ```
 
 ## License
-This project is licensed under the MIT License.
+
+MIT — see [LICENSE](LICENSE).
 
 ## Contributing
-Contributions are welcome! Feel free to open an issue or submit a pull request if you have any suggestions or improvements.
+
+Contributions are welcome! Open an issue or submit a pull request.
