@@ -1,9 +1,9 @@
-name: Run unit tests
+name: CI
 on: [pull_request]
 
 jobs:
-  run-unit-tests:
-    name: python
+  ci:
+    name: lint, type-check & test
     runs-on: ubuntu-latest
 
     steps:
@@ -17,6 +17,15 @@ jobs:
 
       - name: Install the project
         run: uv sync --locked
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format --check .
+
+      - name: Type check
+        run: uv run pyright
 
       - name: Run tests
         run: uv run pytest tests

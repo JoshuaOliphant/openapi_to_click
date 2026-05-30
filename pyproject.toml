@@ -1,9 +1,10 @@
 [project]
 name = "openapi-to-cli"
 authors = [{ name = "Joshua Oliphant", email = "joshua.oliphant@hey.com" }]
-version = "0.1.0"
-description = "A CLI generator for OpenAPI specs"
+version = "0.2.0"
+description = "Generate Click-based command-line interfaces from OpenAPI 3.x specs"
 readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.13"
 dependencies = [
     "click>=8.3.0",
@@ -11,13 +12,39 @@ dependencies = [
     "openapi-python-client>=0.28.3",
     "pydantic>=2.13.3",
     "pyyaml>=6.0.3",
+    "tomlkit>=0.13.2",
 ]
+
+[project.scripts]
+openapi-to-cli = "openapi_to_cli.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/JoshuaOliphant/openapi_to_click"
+Repository = "https://github.com/JoshuaOliphant/openapi_to_click"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/openapi_to_cli"]
 
 [dependency-groups]
 dev = [
     "pytest>=8.3.3",
+    "ruff>=0.9.0",
+    "pyright>=1.1.390",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "W"]
 
 [tool.pyright]
 venvPath = "."
 venv = ".venv"
+include = ["src", "tests"]
