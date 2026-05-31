@@ -95,6 +95,29 @@ uv run pyright             # type-check
 uv build
 ```
 
+## Versioning & Releases
+
+This project follows [Semantic Versioning](https://semver.org/) and keeps a
+[CHANGELOG.md](CHANGELOG.md) in [Keep a Changelog](https://keepachangelog.com/)
+format. The version of record lives in `pyproject.toml`; `openapi_to_cli.__version__`
+reads it back at runtime and powers `--version`.
+
+To cut a release:
+
+1. Move the relevant `## [Unreleased]` notes in `CHANGELOG.md` under a new
+   `## [X.Y.Z]` heading and update the compare links at the bottom.
+2. Bump `version` in `pyproject.toml` to `X.Y.Z`.
+3. Commit, then tag and push:
+
+   ```sh
+   git tag vX.Y.Z
+   git push origin vX.Y.Z
+   ```
+
+Pushing a `vX.Y.Z` tag triggers `.github/workflows/release.yml`, which verifies
+the tag matches the package version, builds the sdist + wheel, and publishes a
+GitHub Release with the built artifacts attached.
+
 ## License
 
 MIT — see [LICENSE](LICENSE).
