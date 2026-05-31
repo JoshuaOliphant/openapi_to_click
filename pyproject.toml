@@ -34,6 +34,11 @@ dev = [
     "pytest>=8.3.3",
     "ruff>=0.9.0",
     "pyright>=1.1.390",
+    # Used by the example app and the end-to-end integration test, which
+    # generates a CLI from the running app's live OpenAPI spec.
+    "fastapi>=0.115.0",
+    "uvicorn>=0.32.0",
+    "httpx>=0.27.0",
 ]
 
 [tool.ruff]
@@ -43,6 +48,10 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "W"]
+
+[tool.ruff.lint.per-file-ignores]
+# Depends(...) in argument defaults is the idiomatic FastAPI pattern.
+"examples/**" = ["B008"]
 
 [tool.pyright]
 venvPath = "."
