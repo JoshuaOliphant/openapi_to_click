@@ -81,6 +81,13 @@ The generated `cli.py` provides one subcommand per operation, with:
 `conftest.py` provides a realistic `valid_openapi_spec` fixture (tags + a `$ref`
 request body) and a `write_spec` helper.
 
+**Before changing `naming.py`, `render.py`, or the template, read
+[`docs/TESTING.md`](docs/TESTING.md).** It documents the core invariant (our
+derived names must match exactly what openapi-python-client emits) and a
+torture-spec checklist of edge cases that have each broken generation before
+(reserved words, leading digits, duplicate/cross-tag operationIds, `$ref` and
+path-level parameters, server selection, etc.).
+
 ### Integration test (real generated CLI, no mocks)
 
 `scripts/integration_test.py` is the end-to-end scenario. It starts the example

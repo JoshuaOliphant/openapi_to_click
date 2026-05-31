@@ -27,6 +27,16 @@ def test_naming_helpers():
     )
 
 
+def test_naming_matches_opc_reserved_words_and_prefixes():
+    # opc escapes reserved words and prefixes leading-digit names; bare
+    # snake_case would emit invalid imports / wrong kwargs that drift from
+    # the generated client. These mirror opc's PythonIdentifier(name, "field_").
+    assert naming.endpoint_module("import", "get", "/x") == "import_"
+    assert naming.param_pyname("class") == "class_"
+    assert naming.param_pyname("from") == "from_"
+    assert naming.param_pyname("2fa") == "field_2fa"
+
+
 def test_rendered_cli_is_valid_python(valid_openapi_spec):
     source, _ = _render(valid_openapi_spec)
     # The whole point: the real template must compile.
@@ -62,6 +72,118 @@ def test_errors_render_as_clickexceptions(valid_openapi_spec):
     assert "Request failed" in source
     # The HTTP call is wrapped so httpx errors don't escape as tracebacks.
     assert "_call(" in source
+
+
+def _spec(paths, **extra):
+    return {
+        "openapi": "3.0.0",
+        "info": {"title": "T", "version": "1.0.0"},
+        "paths": paths,
+        **extra,
+    }
+
+
+def test_reserved_word_operation_id_compiles():
+    # operationId "import" -> module/func "import_"; a bare snake_case would
+    # emit `from ...api.default.import import ...`, a SyntaxError.
+    source, _ = _render(
+        _spec({"/import": {"get": {"operationId": "import", "responses": {}}}})
+    )
+    compile(source, "<cli>", "exec")
+    # The reserved word is escaped to import_ in both the module path and alias.
+    assert "from my_client.api.default.import_ import sync_detailed" in source
+
+
+def test_duplicate_operation_names_emit_one_command():
+    # "list_items" and "list-items" both normalise to one opc module, so only
+    # one command must be emitted (no shadowed duplicate def).
+    source, ctx = _render(
+        _spec(
+            {
+                "/a": {"get": {"operationId": "list_items", "responses": {}}},
+                "/b": {"get": {"operationId": "list-items", "responses": {}}},
+            }
+        )
+    )
+    assert source.count('@cli.command("list-items")') == 1
+    assert len(ctx["endpoints"]) == 1
+    compile(source, "<cli>", "exec")
+
+
+def test_cross_tag_name_collision_disambiguated():
+    # Same operationId under two tags: distinct defs, aliases, and commands.
+    source, ctx = _render(
+        _spec(
+            {
+                "/a": {
+                    "get": {"operationId": "list", "tags": ["pets"], "responses": {}}
+                },
+                "/b": {
+                    "get": {"operationId": "list", "tags": ["owners"], "responses": {}}
+                },
+            }
+        )
+    )
+    commands = {ep["command_name"] for ep in ctx["endpoints"]}
+    aliases = {ep["import_alias"] for ep in ctx["endpoints"]}
+    assert len(commands) == 2 and len(aliases) == 2
+    compile(source, "<cli>", "exec")
+
+
+def test_path_level_parameters_are_merged():
+    # A parameter declared at the path level applies to every method under it.
+    source, ctx = _render(
+        _spec(
+            {
+                "/x/{id}": {
+                    "parameters": [
+                        {
+                            "name": "id",
+                            "in": "path",
+                            "required": True,
+                            "schema": {"type": "integer"},
+                        }
+                    ],
+                    "get": {"operationId": "getX", "responses": {}},
+                    "delete": {"operationId": "delX", "responses": {}},
+                }
+            }
+        )
+    )
+    for ep in ctx["endpoints"]:
+        assert any(p["option"] == "--id" for p in ep["params"]), ep
+    assert source.count('"--id"') == 2
+
+
+def test_ref_parameters_are_resolved():
+    # A $ref parameter must be resolved, not dropped — otherwise the generated
+    # command omits a required arg and the client call raises TypeError.
+    source, ctx = _render(
+        _spec(
+            {
+                "/x/{id}": {
+                    "get": {
+                        "operationId": "getX",
+                        "parameters": [{"$ref": "#/components/parameters/IdParam"}],
+                        "responses": {},
+                    }
+                }
+            },
+            components={
+                "parameters": {
+                    "IdParam": {
+                        "name": "id",
+                        "in": "path",
+                        "required": True,
+                        "schema": {"type": "integer"},
+                    }
+                }
+            },
+        )
+    )
+    (ep,) = ctx["endpoints"]
+    assert [p["option"] for p in ep["params"]] == ["--id"]
+    assert '"--id"' in source
 
 
 def test_generated_group_help_lists_commands(valid_openapi_spec):
