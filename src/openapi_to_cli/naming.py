@@ -12,8 +12,13 @@ from openapi_python_client.utils import (
     PythonIdentifier,
     kebab_case,
     pascal_case,
-    snake_case,
 )
+
+# openapi-python-client's default field prefix (used for endpoint module names
+# and parameter identifiers). Reserved words are suffixed with ``_`` and names
+# that would start with a digit get this prefix — so it must match opc exactly,
+# or our imports and call kwargs drift from the generated client.
+_FIELD_PREFIX = "field_"
 
 # Map OpenAPI primitive types onto Click parameter types.
 _CLICK_TYPES = {
@@ -35,9 +40,14 @@ def tag_module(tags: list[str] | None) -> str:
 
 
 def endpoint_module(operation_id: str | None, method: str, path: str) -> str:
-    """Return the endpoint module/function name opc generates for an operation."""
+    """Return the endpoint module name opc generates for an operation.
+
+    opc names the module file ``PythonIdentifier(endpoint.name, field_prefix)``,
+    which snake-cases *and* escapes Python reserved words (e.g. ``import`` ->
+    ``import_``) — plain snake_case would emit invalid imports for those.
+    """
     base = operation_id or f"{method}_{path}"
-    return snake_case(base)
+    return str(PythonIdentifier(value=base, prefix=_FIELD_PREFIX))
 
 
 def command_name(operation_id: str | None, method: str, path: str) -> str:
@@ -47,7 +57,7 @@ def command_name(operation_id: str | None, method: str, path: str) -> str:
 
 def param_pyname(name: str) -> str:
     """Return the Python identifier opc uses for a parameter argument."""
-    return str(PythonIdentifier(value=name, prefix="field"))
+    return str(PythonIdentifier(value=name, prefix=_FIELD_PREFIX))
 
 
 def model_class_from_ref(ref: str) -> str:

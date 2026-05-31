@@ -28,6 +28,7 @@ class OpenAPISpec(BaseModel):
     info: dict[str, Any]
     paths: dict[str, Any]
     servers: list[Server] = []
+    components: dict[str, Any] = {}
 
     @field_validator("openapi")
     @classmethod
