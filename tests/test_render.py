@@ -53,6 +53,17 @@ def test_no_wildcard_model_import(valid_openapi_spec):
     assert "import *" not in source
 
 
+def test_errors_render_as_clickexceptions(valid_openapi_spec):
+    """Common runtime failures must surface as clean messages, not tracebacks."""
+    source, _ = _render(valid_openapi_spec)
+    # Bad JSON, unreadable file, and transport errors all become ClickExceptions.
+    assert "--body is not valid JSON" in source
+    assert "Could not read body file" in source
+    assert "Request failed" in source
+    # The HTTP call is wrapped so httpx errors don't escape as tracebacks.
+    assert "_call(" in source
+
+
 def test_generated_group_help_lists_commands(valid_openapi_spec):
     """Compile and load the generated module, then probe its Click group."""
     source, _ = _render(valid_openapi_spec)

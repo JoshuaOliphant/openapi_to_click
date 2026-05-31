@@ -77,6 +77,8 @@ class _Runner:
             cwd=self.cli_path.parent,
         )
         out = proc.stdout.strip()
+        # Error messages (click.ClickException) go to stderr, so match against both.
+        combined = f"{proc.stdout}\n{proc.stderr}"
         problems = []
         if proc.returncode != expect_exit:
             problems.append(f"exit {proc.returncode} != {expect_exit}")
@@ -86,8 +88,8 @@ class _Runner:
                     problems.append(f"json {out!r} != {expect_json!r}")
             except json.JSONDecodeError:
                 problems.append(f"output was not JSON: {out!r}")
-        if expect_in is not None and expect_in not in out:
-            problems.append(f"{expect_in!r} not in output {out!r}")
+        if expect_in is not None and expect_in not in combined:
+            problems.append(f"{expect_in!r} not in output {combined!r}")
 
         status = "PASS" if not problems else "FAIL"
         print(f"  [{status}] {name}")
@@ -178,6 +180,14 @@ def main() -> int:
                 "GET get-pet missing id exits non-zero on 404",
                 ["get-pet", "--pet-id", "999"],
                 expect_exit=1,
+            )
+
+            # Malformed --body must be a clean error, not a traceback.
+            runner.check(
+                "POST create-pet with invalid JSON body",
+                ["create-pet", "--body", "{not json}"],
+                expect_exit=1,
+                expect_in="not valid JSON",
             )
 
             print()

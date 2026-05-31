@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Generated CLIs now report common runtime failures as clean one-line errors
+  instead of Python tracebacks: an unreachable server / transport error, a
+  malformed `--body` JSON value, and an unreadable `@file` body all surface as
+  `Error: ...` with a non-zero exit.
+
 ## [0.2.0] - 2026-05-31
 
 First properly released version. Restructures the project into an installable
