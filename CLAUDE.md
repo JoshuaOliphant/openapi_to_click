@@ -81,6 +81,36 @@ The generated `cli.py` provides one subcommand per operation, with:
 `conftest.py` provides a realistic `valid_openapi_spec` fixture (tags + a `$ref`
 request body) and a `write_spec` helper.
 
+### Integration test (real generated CLI, no mocks)
+
+`scripts/integration_test.py` is the end-to-end scenario. It starts the example
+FastAPI app (`examples/petstore/app.py`) on a real port, generates a CLI from
+the app's **live** `/openapi.json`, then drives real CLI invocations over HTTP
+and asserts on their output and exit codes (GET with path+query, POST with
+`--body`, an authenticated `--token` request, and a 404 → non-zero exit). Because
+the spec is pulled from the running app, the handlers and the spec can't drift.
+
+```bash
+uv run python scripts/integration_test.py
+```
+
+It runs in CI (the `integration` job) and is also the **agent wrap-up gate** —
+see below.
+
+## Agent workflow
+
+**Before opening or updating a PR (or otherwise wrapping up a change), run the
+integration test and confirm it passes:**
+
+```bash
+uv run python scripts/integration_test.py
+```
+
+Include the result (pass/fail transcript) in the wrap-up. This exercises the
+real generate-then-run loop against a live API, which the unit tests do not —
+treat a failure here as blocking. If a change intentionally alters generated-CLI
+behavior, update `examples/petstore/app.py` and the script's assertions together.
+
 ## Notes / Gotchas
 
 - **openapi-python-client must be on PATH** — it's invoked as a subprocess.
@@ -99,4 +129,6 @@ request body) and a `write_spec` helper.
 - Python 3.13+ (`requires-python = ">=3.13"`, pinned in `.python-version`).
 - Dev deps under `[dependency-groups]` (PEP 735); `uv sync` installs them.
 - `.github/workflows/pr-unit-tests.yml` runs lint, format check, type-check, and
-  tests on every pull request.
+  tests, plus a separate `integration` job that runs `scripts/integration_test.py`.
+- `.github/workflows/release.yml` builds and publishes a GitHub Release when a
+  `vX.Y.Z` tag is pushed.

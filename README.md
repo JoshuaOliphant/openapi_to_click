@@ -89,6 +89,19 @@ uv run ruff format .       # format
 uv run pyright             # type-check
 ```
 
+### Integration test
+
+`scripts/integration_test.py` is a no-mock, end-to-end scenario: it starts the
+example FastAPI app (`examples/petstore/app.py`), generates a CLI from the
+app's **live** OpenAPI spec, then drives real CLI invocations against the running
+server (GET with params, a POST with `--body`, an authenticated `--token`
+request, and a 404 → non-zero exit). Because the spec comes from the running
+app, the example and its spec can't drift apart.
+
+```sh
+uv run python scripts/integration_test.py
+```
+
 ## Building
 
 ```sh
