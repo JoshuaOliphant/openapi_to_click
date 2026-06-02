@@ -7,27 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-- Generated CLIs now report common runtime failures as clean one-line errors
-  instead of Python tracebacks: an unreachable server / transport error, a
-  malformed `--body` JSON value, and an unreadable `@file` body all surface as
-  `Error: ...` with a non-zero exit.
-- Reserved-word and leading-digit names now match openapi-python-client exactly.
-  An `operationId` like `import` is escaped to `import_` (was emitting an invalid
-  `from ... import import ...`), and parameters like `2fa` map to `field_2fa`.
-- `$ref` parameters (`#/components/parameters/...`) are resolved instead of being
-  silently dropped — previously the generated command omitted the argument and
-  the client call raised `TypeError`.
-- Path-level (shared) parameters are merged into every operation under that path.
-- Operations that collide on a generated name are handled: duplicates that opc
-  collapses into one client module now emit a single command, and the same
-  `operationId` under different tags gets distinct, reachable commands.
-
-### Added
-- `docs/TESTING.md`: a testing guide and torture-spec checklist for future work
-  on the generator.
-
-## [0.2.0] - 2026-05-31
+## [0.2.0] - 2026-06-02
 
 First properly released version. Restructures the project into an installable
 package and makes the generated CLI usable in practice.
@@ -43,6 +23,8 @@ package and makes the generated CLI usable in practice.
 - `--version` on both the generator and every generated CLI.
 - ruff (lint + format) and pyright; CI now runs lint, format check, type-check,
   and tests.
+- `docs/TESTING.md`: a testing guide and torture-spec checklist for future work
+  on the generator.
 
 ### Changed
 - Restructured from a flat `app/main.py` script into a `src/openapi_to_cli/`
@@ -61,6 +43,20 @@ package and makes the generated CLI usable in practice.
   table opc emits and the PEP 621 array.
 - Errors raise (`SpecError`, `ClientGenerationError`) and surface as clean
   `click.ClickException` messages instead of being logged and swallowed.
+- Generated CLIs report common runtime failures as clean one-line errors
+  instead of Python tracebacks: an unreachable server / transport error, a
+  malformed `--body` JSON value, and an unreadable `@file` body all surface as
+  `Error: ...` with a non-zero exit.
+- Reserved-word and leading-digit names now match openapi-python-client exactly.
+  An `operationId` like `import` is escaped to `import_` (was emitting an invalid
+  `from ... import import ...`), and parameters like `2fa` map to `field_2fa`.
+- `$ref` parameters (`#/components/parameters/...`) are resolved instead of being
+  silently dropped — previously the generated command omitted the argument and
+  the client call raised `TypeError`.
+- Path-level (shared) parameters are merged into every operation under that path.
+- Operations that collide on a generated name are handled: duplicates that opc
+  collapses into one client module now emit a single command, and the same
+  `operationId` under different tags gets distinct, reachable commands.
 
 ## [0.1.0]
 
